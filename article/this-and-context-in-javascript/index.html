@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Head tag -->
+<head><meta name="generator" content="Hexo 3.8.0">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="读一些无用的书，做一些无用的事，花一些无用的时间，都是为了在一切已知之外，保留一个超越自己的机会。人生中一些很了不起的变化，就是来自这种时刻。">
+    <meta name="keyword" content="">
+    <meta name="theme-color" content="#600090">
+    <meta name="msapplication-navbutton-color" content="#600090">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#600090">
+    <link rel="shortcut icon" href="https://cdn4.iconfinder.com/data/icons/ionicons/512/icon-person-128.png">
+    <link rel="alternate" type="application/atom+xml" title="Zhmoll" href="/atom.xml">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
+    <link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.css">
+    <title>
+        
+        JavaScript中的this与上下文问题｜Zhmoll&#39;s Elysium
+        
+    </title>
+
+    <link rel="canonical" href="https://zhmoll.com/article/this-and-context-in-javascript/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/blog-style.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/css/syntax.css">
+</head>
+
+<style>
+
+    header.intro-header {
+        background-image: url('')
+    }
+</style>
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="" class="animated fadeIn">
+<!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top " id="nav-top" data-ispost="true" data-istags="false
+" data-ishome="false">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand animated pulse" href="/">
+                <span class="brand-logo">
+                    Zhmoll
+                </span>
+                's Blog
+            </a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <!-- Known Issue, found by Hux:
+            <nav>'s height woule be hold on by its content.
+            so, when navbar scale out, the <nav> will cover tags.
+            also mask any touch event of tags, unfortunately.
+        -->
+        <!-- /.navbar-collapse -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/">Home</a>
+                    </li>
+					
+                    
+                        
+							
+                        <li>
+                            <a href="/Categories/">Categories</a>
+                        </li>
+							
+						
+                    
+                        
+							
+                        <li>
+                            <a href="/Tags/">Tags</a>
+                        </li>
+							
+						
+                    
+					
+					
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+//    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    $toggle.addEventListener('click', handleMagic)
+    function handleMagic(e){
+        if ($navbar.className.indexOf('in') > 0) {
+        // CLOSE
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        }else{
+        // OPEN
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+</script>
+
+<!-- Main Content -->
+
+<!--only post-->
+
+
+<img class="wechat-title-img" src="">
+
+
+<style>
+    
+    header.intro-header {
+        background-image: url('')
+    }
+
+    
+</style>
+
+<header class="intro-header">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-center">
+                <div class="post-heading">
+                    <h1>JavaScript中的this与上下文问题</h1>
+                    
+                    <span class="meta">
+                         作者 Zhmoll
+                        <span>
+                          日期 2019-02-11
+                         </span>
+                    </span>
+                    <div class="tags text-center">
+                        
+                        <a class="tag" href="/tags/#JavaScript" title="JavaScript">JavaScript</a>
+                        
+                        <a class="tag" href="/tags/#this" title="this">this</a>
+                        
+                        <a class="tag" href="/tags/#context" title="context">context</a>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="post-title-haojen">
+        <span>
+            JavaScript中的this与上下文问题
+        </span>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+            <!-- Post Container -->
+            <div class="col-lg-8 col-lg-offset-1 col-sm-9 post-container">
+                <p>在JavaScript中，this指针指向的内容一直很迷。与预期不一致的结果经常出现，还难以探索出现错误的原因。此外，网络上对这个问题的讨论比比皆是，但是鲜有十分正确的与时俱进的说法。网上的许多总结往往混淆了上下文与作用域之间的关系。究其本质，JavaScript是一门设计得十分糟糕的语言，历史遗留问题严重地拖累了它变得更加强大的步伐，也阻止了不少程序员在这门语言上晋升的道路。</p>
+<p>最近我又被这个问题所困扰，因此查阅大量资料进行学习，形成笔记。</p>
+<p>this指针问题本质上与执行上下文（execution context，下简称上下文）问题相关。上下文指调用堆栈的顶层，是程序当前的运行环境。上下文由运行时函数的调用逻辑决定的，而this与函数调用时所采取的方式相关。因此这两个概念都具有动态的特征，可以借助上下文来探讨this的指向情况。</p>
+<p>关于作用域，这里做一个简单的介绍。本文的作用域乃至绝大多数JavaScript开发所提及的作用域都是指词法作用域（lexical scope，下简称作用域），是定义时决定的，具有静态的特性。臭名昭著的动态作用域，即使用with语句实现的作用域，请无视掉它。作用域在ES6出现以后分为全局作用域、函数作用域、块级作用域三类。直观来说，就是大括号包含的代码块的层级划分了不同的作用域。程序员编写的代码所形成的各个作用域具有的继承关系可以构成作用域链。</p>
+<p>本文并不探讨作用域，只是在涉及作用域的时候说明this的表现。本文主要关心的是上下文与对应this的问题。</p>
+<h1 id="一、全局上下文"><a href="#一、全局上下文" class="headerlink" title="一、全局上下文"></a>一、全局上下文</h1><p>顶层对象在浏览器中，是window；在Node.js中，是global。在浏览器控制台中打印this会得到window对象；在Node.js的repl环境中打印this会得到global对象。在这些全局上下文中，this都指向顶层对象。</p>
+<p>但是，在Node.js的js文件中打印this会得到module.exports对象。显然比起“全局上下文”，我更愿意称其为“模块上下文”，因为这似乎更符合实际意义。相应的，虽然语言规定顶层的作用域是全局作用域，但是我们编写的代码总是会被包裹上函数的外衣，形成模块来运行。</p>
+<p>全进程唯一的顶层对象，若是在全局作用域之中的，那我们所编写的代码就一定不在这个作用域中。无论在哪种运行时环境下，你总是可以重新用let声明一个WeakMap变量，而不会得到重复声明的报错。而由先验知识得知，let的声明在同一作用域下不可以重复，只能在不同作用域下被覆盖。也就是说，无论是repl环境还是模块环境，程序员所编写的代码都在全局作用域的子作用域中。如果从模块加载的角度来看待这个问题，激进一些甚至可以说，“都是在函数作用域内，都绑定了不同的上下文对象”。</p>
+<p>这里不再深究作用域的问题，只要记住全局上下文的this是在不同环境所得到的不同对象，在模块中得到的是module.exports对象，在其他环境就是对应的顶层对象。</p>
+<h1 id="二、函数上下文"><a href="#二、函数上下文" class="headerlink" title="二、函数上下文"></a>二、函数上下文</h1><p>函数的调用方式决定了上下文（context），this根据函数调用方式决定指向对象（除了箭头函数）。由此，探究this的指向问题，实质上就是探究函数被调用的方式问题。</p>
+<p>JavaScript中一共有四种调用模式：方法调用模式、函数调用模式、构造器调用模式和apply调用模式。</p>
+<h2 id="1、方法调用模式"><a href="#1、方法调用模式" class="headerlink" title="1、方法调用模式"></a>1、方法调用模式</h2><p>当一个函数被保存为一个对象的属性时，我们称它为一个方法。当方法被调用时，this被绑定到该对象。通过点表达式或[subscript]下标表达式，函数被当作一个方法来调用，即 this 被绑定到该表达式之前的对象。</p>
+<h3 id="1）、简单对象方法调用"><a href="#1）、简单对象方法调用" class="headerlink" title="1）、简单对象方法调用"></a>1）、简单对象方法调用</h3><p>当方法是对象自身的属性时，这种就是最简单的方法调用：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> obj = &#123;</span><br><span class="line">    value: <span class="number">5</span>,</span><br><span class="line">    update: <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.value += <span class="number">1</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> anotherObj = &#123;</span><br><span class="line">    link: obj</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(obj.value)  <span class="comment">// 5</span></span><br><span class="line"></span><br><span class="line">obj.update()</span><br><span class="line"><span class="built_in">console</span>.log(obj.value)  <span class="comment">// 6</span></span><br><span class="line"></span><br><span class="line">obj[<span class="string">'update'</span>]()</span><br><span class="line"><span class="built_in">console</span>.log(obj.value)  <span class="comment">// 7</span></span><br><span class="line"></span><br><span class="line">anotherObj.link.update()</span><br><span class="line"><span class="built_in">console</span>.log(obj.value)  <span class="comment">// 8</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> func = obj.update</span><br><span class="line">func()  <span class="comment">// 变成了第二节的函数调用模式</span></span><br><span class="line"><span class="built_in">console</span>.log(obj.value)  <span class="comment">// 8</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="2）、原型链上的对象方法调用"><a href="#2）、原型链上的对象方法调用" class="headerlink" title="2）、原型链上的对象方法调用"></a>2）、原型链上的对象方法调用</h3><p>在原型链上的函数以方法调用模式调用，结果也是符合该规律的：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> obj = &#123;</span><br><span class="line">    foo: <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.a + <span class="keyword">this</span>.b</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="keyword">const</span> extendedObj = <span class="built_in">Object</span>.create(obj)</span><br><span class="line">extendedObj.a = <span class="number">1</span></span><br><span class="line">extendedObj.b = <span class="number">4</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(extendedObj.foo === extendedObj.__proto__.foo)  <span class="comment">// true</span></span><br><span class="line"><span class="built_in">console</span>.log(extendedObj.foo())  <span class="comment">// 5</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="3）、getter与setter"><a href="#3）、getter与setter" class="headerlink" title="3）、getter与setter"></a>3）、getter与setter</h3><p>getter与setter中的this依然符合本规律：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> obj = &#123;</span><br><span class="line">    a: <span class="number">5</span>,</span><br><span class="line">    b: <span class="number">6</span>,</span><br><span class="line">    <span class="keyword">get</span> sum() &#123;</span><br><span class="line">    <span class="built_in">console</span>.log(<span class="keyword">this</span> === obj)  <span class="comment">// true</span></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.a + <span class="keyword">this</span>.b</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(obj.sum)  <span class="comment">// 11</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="4）、class的实例方法调用"><a href="#4）、class的实例方法调用" class="headerlink" title="4）、class的实例方法调用"></a>4）、class的实例方法调用</h3><p>同在prototype上定义的函数被对象调用了一样，this也会被绑定到调用方法的实例对象上：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Animal</span> </span>&#123;</span><br><span class="line">    <span class="keyword">constructor</span>(name) &#123;</span><br><span class="line">    <span class="keyword">this</span>.name = name</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> dog = <span class="keyword">new</span> Animal(<span class="string">'DOG'</span>)</span><br><span class="line"><span class="built_in">console</span>.log(dog.__proto__.constructor === Animal.prototype.constructor)  <span class="comment">// true</span></span><br><span class="line"><span class="built_in">console</span>.log(dog.__proto__.constructor === Animal)  <span class="comment">// true</span></span><br><span class="line"><span class="built_in">console</span>.log(dog.name)  <span class="comment">// DOG</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="2、函数调用模式"><a href="#2、函数调用模式" class="headerlink" title="2、函数调用模式"></a>2、函数调用模式</h2><p>当函数并非是一个对象的属性，那么它就是被当作一个函数来进行调用的。</p>
+<h3 id="1）、简单函数调用"><a href="#1）、简单函数调用" class="headerlink" title="1）、简单函数调用"></a>1）、简单函数调用</h3><p>很遗憾，这里有语言设计上的错误。倘若语言设计是正确的，this应该绑定到外部函数的this变量上（遵循作用域链的规则）：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">foo</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span> === global</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(foo())  <span class="comment">// true</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">bar</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">baz</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span> === global</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> baz()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(bar())  <span class="comment">// true</span></span><br></pre></td></tr></table></figure></p>
+<p>上述代码的结果表明，使用函数调用的this莫名其妙地被绑定到了顶层对象中了，哪怕是另一个函数作用域中，this依旧如此。</p>
+<h3 id="2）、严格模式的函数调用"><a href="#2）、严格模式的函数调用" class="headerlink" title="2）、严格模式的函数调用"></a>2）、严格模式的函数调用</h3><p>然而，更神奇的是，使用严格模式运行这段代码又有不一样的结果：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">'use strict'</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">foo</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(foo())  <span class="comment">// undefined</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">bar</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">baz</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> baz()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(bar())  <span class="comment">// undefined</span></span><br></pre></td></tr></table></figure></p>
+<p>在严格模式下，this将保持他进入上下文时的值。采取函数调用模式，this必然指向undefined；采用第四节的Apply调用模式，this指向所绑定的上下文。</p>
+<p>简单来说，在函数调用模式中，普通模式下this指向global，严格模式下this是undefined。</p>
+<h3 id="3）、解决方案"><a href="#3）、解决方案" class="headerlink" title="3）、解决方案"></a>3）、解决方案</h3><p>考虑下面的代码，很显然里面的foo函数采用的调用方法是本节提到的函数调用模式，故而this指向了global。若使用严格模式，还会报错你信不信？<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> obj = &#123;</span><br><span class="line">    value: <span class="number">5</span>,</span><br><span class="line">    update: <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">foo</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.value += <span class="number">1</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> foo()</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(obj.value)  <span class="comment">// 5</span></span><br><span class="line">obj.update()</span><br><span class="line"><span class="built_in">console</span>.log(obj.value)  <span class="comment">// 5</span></span><br><span class="line"><span class="built_in">console</span>.log(global.value)  <span class="comment">// NaN</span></span><br></pre></td></tr></table></figure></p>
+<p>解决办法就是临时变量法，给需要绑定的上下文起一个昵称。这种方法非常常用，不过涉及到了一个闭包的问题。这里不加以讨论。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> obj = &#123;</span><br><span class="line">    value: <span class="number">5</span>,</span><br><span class="line">    update: <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">const</span> that = <span class="keyword">this</span></span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">foo</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        that.value += <span class="number">1</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> foo()</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(obj.value)  <span class="comment">// 5</span></span><br><span class="line">obj.update()</span><br><span class="line"><span class="built_in">console</span>.log(obj.value)  <span class="comment">// 6</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="3、构造器调用模式"><a href="#3、构造器调用模式" class="headerlink" title="3、构造器调用模式"></a>3、构造器调用模式</h2><p>若一个函数的设计目的是为了配合new关键字进行使用，那么我们称其为构造器函数。设计了原型继承机制的JavaScript与其他实现了类的语言不太一样，虽然语法是比较相似的。这里我们只关心使用构造器函数的this的表现，不谈及其原型继承机制。</p>
+<p>如果一个函数前面带上new来调用，那么背地里将会创造一个连接到该函数prototype成员的新对象，同时this也会被绑定到这个新对象。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">constructor</span>(<span class="params">status</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.status = status</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">constructor</span>.prototype.get_status = function () &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.status</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> foo = <span class="keyword">new</span> <span class="keyword">constructor</span>('OK')</span><br><span class="line">console.log(foo.status)  // OK</span><br><span class="line">console.log(foo.get_status())  // OK</span><br><span class="line"></span><br><span class="line">const bar = <span class="keyword">constructor</span>('fail')</span><br><span class="line">console.log(global.status)  // fail</span><br></pre></td></tr></table></figure></p>
+<p>如果调用构造器函数时没有在前面加上new，可能会方式比较糟糕的事情，既不报错又得不到想要的结果，就如同上面的代码后面的所示，并没有得到想要的结果。</p>
+<h2 id="4、Apply调用模式"><a href="#4、Apply调用模式" class="headerlink" title="4、Apply调用模式"></a>4、Apply调用模式</h2><p>捉摸不透this问题在实际的开发过程中会带来巨大的麻烦，好在可以通过预先绑定对象作为this的指向对象。</p>
+<h3 id="1）、apply"><a href="#1）、apply" class="headerlink" title="1）、apply"></a>1）、apply</h3><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> that = &#123;</span><br><span class="line">    name: <span class="string">'that'</span>,</span><br><span class="line">    status: <span class="string">'empty'</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">foo</span>(<span class="params">status</span>) </span>&#123;</span><br><span class="line">    <span class="built_in">console</span>.log(<span class="keyword">this</span> === that)</span><br><span class="line">    <span class="keyword">this</span>.status = status</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">foo(<span class="string">'fail'</span>)  <span class="comment">// 打印 false</span></span><br><span class="line"><span class="built_in">console</span>.log(that.status)  <span class="comment">// empty</span></span><br><span class="line"></span><br><span class="line">foo.apply(that, [<span class="string">'success'</span>])  <span class="comment">// 打印 true</span></span><br><span class="line"><span class="built_in">console</span>.log(that.status)  <span class="comment">// success</span></span><br></pre></td></tr></table></figure>
+<h3 id="2）、call"><a href="#2）、call" class="headerlink" title="2）、call"></a>2）、call</h3><p>call只是接收的参数形式不同，与apply没有本质区别，更何况现在可以对数组变量解包了。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> that = &#123;</span><br><span class="line">    name: <span class="string">'that'</span>,</span><br><span class="line">    status: <span class="string">'empty'</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">foo</span>(<span class="params">status</span>) </span>&#123;</span><br><span class="line">    <span class="built_in">console</span>.log(<span class="keyword">this</span> === that)</span><br><span class="line">    <span class="keyword">this</span>.status = status</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">foo(<span class="string">'fail'</span>)  <span class="comment">// 打印 false</span></span><br><span class="line"><span class="built_in">console</span>.log(that.status)  <span class="comment">// empty</span></span><br><span class="line"></span><br><span class="line">foo.call(that, ...[<span class="string">'success'</span>])  <span class="comment">// 打印 true</span></span><br><span class="line"><span class="built_in">console</span>.log(that.status)  <span class="comment">// success</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="3）、bind"><a href="#3）、bind" class="headerlink" title="3）、bind"></a>3）、bind</h3><p>可以创建一个新的函数，这个函数绑定了原先函数和一定的上下文对象，使得编程更佳容易。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> that = &#123;</span><br><span class="line">    name: <span class="string">'that'</span>,</span><br><span class="line">    status: <span class="string">'empty'</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">foo</span>(<span class="params">status</span>) </span>&#123;</span><br><span class="line">    <span class="built_in">console</span>.log(<span class="keyword">this</span> === that)</span><br><span class="line">    <span class="keyword">this</span>.status = status</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> bar = foo.bind(that)</span><br><span class="line">bar(<span class="string">'ok'</span>) <span class="comment">// 打印 true</span></span><br><span class="line"><span class="built_in">console</span>.log(that.status)  <span class="comment">// ok</span></span><br></pre></td></tr></table></figure></p>
+<h1 id="三、箭头函数"><a href="#三、箭头函数" class="headerlink" title="三、箭头函数"></a>三、箭头函数</h1><p>箭头函数当然有自己的上下文，也属于函数上下文。然而因为箭头函数的一些特质，所以有与上述的情况区分开来，并不是说箭头函数的函数上下文与上面一章所说的不同。</p>
+<p>箭头函数没有自己的this、arguments、super和new.target，因此不能用作构造函数。箭头函数适用于本来需要匿名函数的地方。</p>
+<h2 id="1、箭头函数没有自己的this"><a href="#1、箭头函数没有自己的this" class="headerlink" title="1、箭头函数没有自己的this"></a>1、箭头函数没有自己的this</h2><p>箭头函数没有自己的this，它的this是作用域链上继承的来的。</p>
+<p>接下来解释一下这句话。</p>
+<p>箭头函数不会创建自己的this。箭头函数有一个自己的函数作用域，当自己找不到某个变量后，会从作用域链逐级寻找这个变量。于是，this就在这个作用域链上寻找。由于作用域是在程序设计者编写程序时定义的，因此箭头函数内的this是在定义的时候决定用谁的（但究竟这个this是什么对象还得看被借用this的函数是如何被调用的）。</p>
+<p>箭头函数作用域内的arguments、super和new.targert与this行为一致，下面仅以this为例。</p>
+<h3 id="1）、箭头函数的直接父作用域有this"><a href="#1）、箭头函数的直接父作用域有this" class="headerlink" title="1）、箭头函数的直接父作用域有this"></a>1）、箭头函数的直接父作用域有this</h3><p>接下来用代码解释箭头函数直接继承父作用域的this问题。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> obj = &#123;</span><br><span class="line">    value: <span class="number">5</span>,</span><br><span class="line">    update: <span class="function"><span class="params">()</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">this</span>.value += <span class="number">1</span></span><br><span class="line">    <span class="built_in">console</span>.log(<span class="keyword">this</span> === <span class="built_in">module</span>.exports)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">obj.update()  <span class="comment">// 打印 true</span></span><br><span class="line"><span class="built_in">console</span>.log(obj.value)  <span class="comment">// 5</span></span><br></pre></td></tr></table></figure></p>
+<p>上述代码，因为定义这个箭头函数的时候，上层作用域是全局作用域。恰好全局作用域上有 this 这个变量，由本文第一章得知，这个 this指向module.exports。</p>
+<h3 id="2）、箭头函数的作用域链上有this"><a href="#2）、箭头函数的作用域链上有this" class="headerlink" title="2）、箭头函数的作用域链上有this"></a>2）、箭头函数的作用域链上有this</h3><p>设想一种这样的作用域链：全局作用域 -&gt; 箭头函数a作用域 -&gt; 箭头函数b作用域。</p>
+<p>当一个箭头函数b被包裹在另一个箭头函数a中，b中的this首先会去寻找a中有没有this，发现找不到后，再找a的上层全局作用域，找到了后即可使用。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> a = <span class="function"><span class="params">()</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">const</span> b = <span class="function"><span class="params">()</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="built_in">console</span>.log(<span class="string">'b 的上下文是 module.exports 吗？'</span>, <span class="keyword">this</span> === <span class="built_in">module</span>.exports)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">console</span>.log(<span class="string">'a 的上下文是 module.exports 吗？'</span>, <span class="keyword">this</span> === <span class="built_in">module</span>.exports)</span><br><span class="line">    b()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">a()  <span class="comment">// true/true</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="3）、混合作用域链"><a href="#3）、混合作用域链" class="headerlink" title="3）、混合作用域链"></a>3）、混合作用域链</h3><p>当混合了函数表达式，综合第二章的规律，不难得出结论。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> obj = &#123;</span><br><span class="line">    update: <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="built_in">console</span>.log(<span class="keyword">this</span> === obj)</span><br><span class="line">    <span class="built_in">console</span>.log(<span class="keyword">this</span> === global)</span><br><span class="line">    <span class="keyword">return</span> <span class="function"><span class="params">()</span> =&gt;</span> &#123;</span><br><span class="line">        <span class="built_in">console</span>.log(<span class="keyword">this</span> === obj)</span><br><span class="line">        <span class="built_in">console</span>.log(<span class="keyword">this</span> === global)</span><br><span class="line">    &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">obj.update()()  <span class="comment">// 打印 true\false\true\false</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> foo = obj.update</span><br><span class="line">foo()()  <span class="comment">// 打印 \false\true\false\true</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="4）、改变箭头函数所借用的this的对象"><a href="#4）、改变箭头函数所借用的this的对象" class="headerlink" title="4）、改变箭头函数所借用的this的对象"></a>4）、改变箭头函数所借用的this的对象</h3><p>当改变了箭头函数上层的作用域拥有者匿名函数的this的取值，箭头函数的this也是会被改变的。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> obj = &#123;</span><br><span class="line">    value: <span class="number">5</span>,</span><br><span class="line">    update: <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">const</span> arr = <span class="function"><span class="params">()</span> =&gt;</span> &#123;</span><br><span class="line">        <span class="keyword">this</span>.value++</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> arr()</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> anotherObj = &#123;</span><br><span class="line">    value: <span class="number">10</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">obj.update()</span><br><span class="line"><span class="built_in">console</span>.log(obj.value) <span class="comment">// 6</span></span><br><span class="line"></span><br><span class="line">obj.update.call(anotherObj)</span><br><span class="line"><span class="built_in">console</span>.log(anotherObj.value)  <span class="comment">// 11</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="2、箭头函数也因此无法绑定this"><a href="#2、箭头函数也因此无法绑定this" class="headerlink" title="2、箭头函数也因此无法绑定this"></a>2、箭头函数也因此无法绑定this</h2><p>因为箭头函数没有自己的this，所以call、apply方法无法指定箭头函数内部的this，始终由作用域链决定。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> obj = &#123;</span><br><span class="line">    value: <span class="number">5</span>,</span><br><span class="line">    update: update</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">update</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">const</span> arr = <span class="function"><span class="params">()</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="keyword">this</span>.value += <span class="number">1</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    arr.call(global)  <span class="comment">// 被无视了</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">obj.update()</span><br><span class="line"><span class="built_in">console</span>.log(obj.value)  <span class="comment">// 6</span></span><br></pre></td></tr></table></figure></p>
+<p>那么，想改变箭头函数内部的this指向怎么办呢？答案就是包裹一层普通的函数，代码见上一节末尾。</p>
+<h1 id="四、实践问题"><a href="#四、实践问题" class="headerlink" title="四、实践问题"></a>四、实践问题</h1><h2 id="1、回调函数中的this会指向哪里？"><a href="#1、回调函数中的this会指向哪里？" class="headerlink" title="1、回调函数中的this会指向哪里？"></a>1、回调函数中的this会指向哪里？</h2><p>在日常的编程中，一个很实际的问题就是回调函数的this会指向哪里。这个问题的答案，其实在于调用这个回调函数的函数是如何设计的。</p>
+<h3 id="1）、函数调用模式"><a href="#1）、函数调用模式" class="headerlink" title="1）、函数调用模式"></a>1）、函数调用模式</h3><p>由于在函数体内，参照第二章，一般会是第2节所示的结果。<br>自己实现一个函数调用的调用方法的函数。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">foo</span>(<span class="params">func</span>) </span>&#123;</span><br><span class="line">    func()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">bar</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="built_in">console</span>.log(<span class="keyword">this</span> === global)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">foo(bar)  <span class="comment">// 打印 true</span></span><br><span class="line"></span><br><span class="line">使用process.nextTick实验了一下，发现它内部也是这么调用回调函数的。</span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">bar</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="built_in">console</span>.log(<span class="keyword">this</span> === global)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">process.nextTick(bar)  <span class="comment">// true</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="2）、方法调用模式"><a href="#2）、方法调用模式" class="headerlink" title="2）、方法调用模式"></a>2）、方法调用模式</h3><p>并不是所有的回调函数的实现方法都向上面一样。若函数里面调用这个回调函数所采取的方法是方法调用，那么this就指向一个实例对象了。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">bar</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="built_in">console</span>.log(<span class="keyword">this</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">setTimeout(bar, <span class="number">100</span>)  <span class="comment">// 打印 Timeout 对象</span></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">    Timeout &#123;</span></span><br><span class="line"><span class="comment">    _called: true,</span></span><br><span class="line"><span class="comment">    _idleTimeout: 100,</span></span><br><span class="line"><span class="comment">    _idlePrev: null,</span></span><br><span class="line"><span class="comment">    _idleNext: null,</span></span><br><span class="line"><span class="comment">    _idleStart: 118,</span></span><br><span class="line"><span class="comment">    _onTimeout: [Function: bar],</span></span><br><span class="line"><span class="comment">    _timerArgs: undefined,</span></span><br><span class="line"><span class="comment">    _repeat: null,</span></span><br><span class="line"><span class="comment">    _destroyed: false,</span></span><br><span class="line"><span class="comment">    [Symbol(unrefed)]: false,</span></span><br><span class="line"><span class="comment">    [Symbol(asyncId)]: 5,</span></span><br><span class="line"><span class="comment">    [Symbol(triggerId)]: 1 &#125;</span></span><br><span class="line"><span class="comment">*/</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="3）、Apply调用模式"><a href="#3）、Apply调用模式" class="headerlink" title="3）、Apply调用模式"></a>3）、Apply调用模式</h3><p>我们完全可以自己绑定回调函数内部的this，实现指哪打哪的效果。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> obj = &#123;</span><br><span class="line">    value: <span class="number">5</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">modifiy</span>(<span class="params">f</span>) </span>&#123;</span><br><span class="line">    f.call(obj)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">helper</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.value += <span class="number">1</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">modifiy(helper)</span><br><span class="line"><span class="built_in">console</span>.log(obj.value)  <span class="comment">// 6</span></span><br></pre></td></tr></table></figure></p>
+<p>好心的框架设计者总会把this问题解决好，然后让业务逻辑的开发人员可以按照一定的约定写出正确优雅的代码。这启示着作为框架的设计者，this问题是需要注意和考虑的。</p>
+<h3 id="4）、箭头函数"><a href="#4）、箭头函数" class="headerlink" title="4）、箭头函数"></a>4）、箭头函数</h3><p>当问题抛给箭头函数，就要意识到箭头函数的this是在定义时决定的。想清楚这点，就可以分析this到底指向什么地方。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">setTimeout(<span class="function"><span class="params">()</span> =&gt;</span> &#123;</span><br><span class="line">    <span class="built_in">console</span>.log(<span class="keyword">this</span> === <span class="built_in">module</span>.exports)  <span class="comment">// true</span></span><br><span class="line">&#125;, <span class="number">100</span>)</span><br><span class="line"></span><br><span class="line">setTimeout(<span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="built_in">console</span>.log(<span class="keyword">this</span>) <span class="comment">// Timeout 对象</span></span><br><span class="line">&#125;, <span class="number">300</span>);</span><br></pre></td></tr></table></figure></p>
+<p>mongoose在schema上定义的实例方法就特别注明了不要声明箭头函数，否则可能与预期的情况不一致。</p>
+<h2 id="2、块作用域中的this会指向哪里？"><a href="#2、块作用域中的this会指向哪里？" class="headerlink" title="2、块作用域中的this会指向哪里？"></a>2、块作用域中的this会指向哪里？</h2><p>箭头函数的上下文问题的答案本质上就是自己没有this，而在作用域链上寻找this。块作用域也非常符合这个特征，所以块作用域的this问题的答案与箭头函数的行为一致。</p>
+
+                <hr>
+                
+
+                <ul class="pager">
+                    
+                    
+                </ul>
+
+                
+
+                
+
+
+                <!--加入新的评论系统-->
+                
+
+                
+
+            </div>
+
+            <div class="hidden-xs col-sm-3 toc-col">
+                <div class="toc-wrap">
+                    <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#一、全局上下文"><span class="toc-text">一、全局上下文</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#二、函数上下文"><span class="toc-text">二、函数上下文</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1、方法调用模式"><span class="toc-text">1、方法调用模式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1）、简单对象方法调用"><span class="toc-text">1）、简单对象方法调用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2）、原型链上的对象方法调用"><span class="toc-text">2）、原型链上的对象方法调用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3）、getter与setter"><span class="toc-text">3）、getter与setter</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4）、class的实例方法调用"><span class="toc-text">4）、class的实例方法调用</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2、函数调用模式"><span class="toc-text">2、函数调用模式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1）、简单函数调用"><span class="toc-text">1）、简单函数调用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2）、严格模式的函数调用"><span class="toc-text">2）、严格模式的函数调用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3）、解决方案"><span class="toc-text">3）、解决方案</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3、构造器调用模式"><span class="toc-text">3、构造器调用模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4、Apply调用模式"><span class="toc-text">4、Apply调用模式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1）、apply"><span class="toc-text">1）、apply</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2）、call"><span class="toc-text">2）、call</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3）、bind"><span class="toc-text">3）、bind</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#三、箭头函数"><span class="toc-text">三、箭头函数</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1、箭头函数没有自己的this"><span class="toc-text">1、箭头函数没有自己的this</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1）、箭头函数的直接父作用域有this"><span class="toc-text">1）、箭头函数的直接父作用域有this</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2）、箭头函数的作用域链上有this"><span class="toc-text">2）、箭头函数的作用域链上有this</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3）、混合作用域链"><span class="toc-text">3）、混合作用域链</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4）、改变箭头函数所借用的this的对象"><span class="toc-text">4）、改变箭头函数所借用的this的对象</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2、箭头函数也因此无法绑定this"><span class="toc-text">2、箭头函数也因此无法绑定this</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#四、实践问题"><span class="toc-text">四、实践问题</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1、回调函数中的this会指向哪里？"><span class="toc-text">1、回调函数中的this会指向哪里？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1）、函数调用模式"><span class="toc-text">1）、函数调用模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2）、方法调用模式"><span class="toc-text">2）、方法调用模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3）、Apply调用模式"><span class="toc-text">3）、Apply调用模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4）、箭头函数"><span class="toc-text">4）、箭头函数</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2、块作用域中的this会指向哪里？"><span class="toc-text">2、块作用域中的this会指向哪里？</span></a></li></ol></li></ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Sidebar Container -->
+
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+
+                <!-- Friends Blog -->
+                
+            </div>
+        </div>
+
+    </div>
+</article>
+
+
+
+
+
+
+
+<!-- Footer -->
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-center">
+                <br>
+                <ul class="list-inline text-center">
+                
+                
+                
+
+                
+
+                
+
+                
+                    <li>
+                        <a target="_blank" href="https://github.com/zhmoll">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; Zhmoll 2019
+                    <br>
+                    <span id="busuanzi_container_site_pv" style="font-size: 12px;">PV: <span id="busuanzi_value_site_pv"></span> Times</span>
+                    <br>
+                    Theme by <a href="https://haojen.github.io/">Haojen Ma</a>
+                </p>
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src="/js/jquery.min.js"></script>
+
+<!-- Bootstrap Core JavaScript -->
+<script src="/js/bootstrap.min.js"></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="/js/blog.js"></script>
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if($('#tag_cloud').length !== 0){
+        async("https://zhmoll.com/js/jquery.tagcloud.js",function(){
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: {start: '#bbbbee', end: '#0085a1'},
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdn.bootcss.com/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+
+<!-- Google Analytics -->
+
+
+
+<!-- Baidu Tongji -->
+
+
+<!-- swiftype -->
+<script type="text/javascript">
+  (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+  (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+  e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+  })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+  _st('install','','2.0.0');
+</script>
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<!--wechat title img-->
+<img class="wechat-title-img" src="img/head.jpg">
+</body>
+
+</html>
