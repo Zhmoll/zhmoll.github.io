@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Head tag -->
+<head><meta name="generator" content="Hexo 3.8.0">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="读一些无用的书，做一些无用的事，花一些无用的时间，都是为了在一切已知之外，保留一个超越自己的机会。人生中一些很了不起的变化，就是来自这种时刻。">
+    <meta name="keyword" content="">
+    <meta name="theme-color" content="#600090">
+    <meta name="msapplication-navbutton-color" content="#600090">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#600090">
+    <link rel="shortcut icon" href="https://cdn4.iconfinder.com/data/icons/ionicons/512/icon-person-128.png">
+    <link rel="alternate" type="application/atom+xml" title="Zhmoll" href="/atom.xml">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
+    <link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.css">
+    <title>
+        
+        JavaScript中的作用域和作用域链｜Zhmoll&#39;s Elysium
+        
+    </title>
+
+    <link rel="canonical" href="https://zhmoll.com/articles/JavaScript/scope-and-scope-chain-in-javascript/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/blog-style.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/css/syntax.css">
+</head>
+
+<style>
+
+    header.intro-header {
+        background-image: url('')
+    }
+</style>
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="" class="animated fadeIn">
+<!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top " id="nav-top" data-ispost="true" data-istags="false
+" data-ishome="false">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand animated pulse" href="/">
+                <span class="brand-logo">
+                    Zhmoll
+                </span>
+                's Blog
+            </a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <!-- Known Issue, found by Hux:
+            <nav>'s height woule be hold on by its content.
+            so, when navbar scale out, the <nav> will cover tags.
+            also mask any touch event of tags, unfortunately.
+        -->
+        <!-- /.navbar-collapse -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/">Home</a>
+                    </li>
+					
+                    
+                        
+							
+                        <li>
+                            <a href="/categories/">Categories</a>
+                        </li>
+							
+						
+                    
+                        
+							
+                        <li>
+                            <a href="/tags/">Tags</a>
+                        </li>
+							
+						
+                    
+					
+					
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+//    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    $toggle.addEventListener('click', handleMagic)
+    function handleMagic(e){
+        if ($navbar.className.indexOf('in') > 0) {
+        // CLOSE
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        }else{
+        // OPEN
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+</script>
+
+<!-- Main Content -->
+
+<!--only post-->
+
+
+<img class="wechat-title-img" src="">
+
+
+<style>
+    
+    header.intro-header {
+        background-image: url('')
+    }
+
+    
+</style>
+
+<header class="intro-header">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-center">
+                <div class="post-heading">
+                    <h1>JavaScript中的作用域和作用域链</h1>
+                    
+                    <span class="meta">
+                         作者 Zhmoll
+                        <span>
+                          日期 2019-03-01
+                         </span>
+                    </span>
+                    <div class="tags text-center">
+                        
+                        <a class="tag" href="/tags/#JavaScript" title="JavaScript">JavaScript</a>
+                        
+                        <a class="tag" href="/tags/#scope" title="scope">scope</a>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="post-title-haojen">
+        <span>
+            JavaScript中的作用域和作用域链
+        </span>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+            <!-- Post Container -->
+            <div class="col-lg-8 col-lg-offset-1 col-sm-9 post-container">
+                <h1 id="一、作用域种类"><a href="#一、作用域种类" class="headerlink" title="一、作用域种类"></a>一、作用域种类</h1><p>目前，标准给了我们三种作用域，分别是全局作用域、函数作用域和块作用域。其实前两种作用域也可以看作是一种“块作用域”，那么为什么还有其存在的必要呢？历史原因。但其有着一些特殊的表现，使得程序员在编写JavaScript的时候可能出现一些莫名其妙的问题。本质上，就是没有搞清楚其设计的特殊之处，而作用域就是一大特殊之处，其坑非浅。</p>
+<h2 id="1、全局作用域与函数作用域"><a href="#1、全局作用域与函数作用域" class="headerlink" title="1、全局作用域与函数作用域"></a>1、全局作用域与函数作用域</h2><p>全局作用域与函数作用域是ES5标准及以前的产物，当不存在块作用域时，他们的一些行为被认为是非常合理的。但是当块作用域产生后，他们的一些情况方法和实际表现就有点难以理喻了。特别是函数作用域，其往往和闭包（closure）、上下文等概念一起出现，使得一些网络上的一些为了解释某种性质的示例代码同时包含了多种JavaScript语言特性，而经常搞混。后面会谈及函数作用域与闭包的问题，而上下文及其相关联的this指向问题由另一篇文章专门研究。</p>
+<p>首先谈及的是全局作用域。语言规范定义的全局作用域是不在函数作用域内的最外层作用域。其实在我们实际编程中的情况比较复杂，repl环境、浏览器环境倒还好说，但是解释编译脚本文件的情况让人摸不着头脑——到底是全局作用域还是函数作用域？毕竟我们都知道，在Node.js现有的模块机制下，文件外层是被包裹了函数的外衣的。既然是在函数之下那自然是函数作用域了。但是，感觉上那是自己所编写代码的最外层，理应有“全局”的名分，然而不同文件的“全局”竟然各不相同——在不同文件的“全局作用域”下声明的变量无法直接被调用。因此，我更愿意把这样的作用域称为“模块作用域”，而称文件下不使用关键字声明的真正的全局变量是在全局作用域中的。幸好无论是何种叫法，都不影响实际的运行效果。</p>
+<p>把这种作用域的称呼问题放在一边，探究一下其有哪些违反常理的地方。</p>
+<p>在ES5标准及以前，块作用域是不存在的东西，也因此有这些经典的代码：</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (<span class="keyword">var</span> i = <span class="number">0</span>; i &lt; <span class="number">5</span>; i++) &#123;</span><br><span class="line">    <span class="built_in">console</span>.log(i)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">console</span>.log(i)</span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">    0</span></span><br><span class="line"><span class="comment">    1</span></span><br><span class="line"><span class="comment">    2</span></span><br><span class="line"><span class="comment">    3</span></span><br><span class="line"><span class="comment">    4</span></span><br><span class="line"><span class="comment">    5</span></span><br><span class="line"><span class="comment">*/</span></span><br></pre></td></tr></table></figure>
+<p>上述代码，究其原因，就在于用于声明变量的var关键字所声明出来的变量并没有块作用域，因此它不属于整个for循环而属于全局作用域（若是函数的一部分那就属于函数作用域）。自然而然地，能够在外边访问到这个变量。</p>
+<p>更近一步，考察下面代码：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> a = []</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">var</span> i = <span class="number">0</span>; i &lt; <span class="number">5</span>; i++) &#123;</span><br><span class="line">    a[i] = <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="built_in">console</span>.log(i)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">a[<span class="number">2</span>]() <span class="comment">// 5</span></span><br></pre></td></tr></table></figure></p>
+<p>对于本代码而言，每次循环都赋予了a[i]一个新的匿名函数，也就是说从a[0]到a[4]分别都有一份这样的匿名函数（这些匿名函数并不是同一个函数对象）。由于变量i是属于for循环外部的作用域的（var关键字所声明出来的变量没有块作用域），在函数作用域中找不到变量i，就向作用域链上寻找，找到父作用域的变量。当函数调用发生时，由于闭包访问了外部作用域的变量i。</p>
+<h2 id="2、块作用域"><a href="#2、块作用域" class="headerlink" title="2、块作用域"></a>2、块作用域</h2><p>块作用域现在大家都很了解，所以就不说成为共识的那部分了。</p>
+<h3 id="1）、令人迷惑的结果"><a href="#1）、令人迷惑的结果" class="headerlink" title="1）、令人迷惑的结果"></a>1）、令人迷惑的结果</h3><p>相对于上面的代码，下面这段代码仅仅改变变量i的声明方式，结果就完全不一样了：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> a = []</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">0</span>; i &lt; <span class="number">5</span>; i++) &#123;</span><br><span class="line">    a[i] = <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="built_in">console</span>.log(i)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">a[<span class="number">2</span>]() <span class="comment">// 2</span></span><br></pre></td></tr></table></figure></p>
+<p>对于本段代码而言，虽然看似使用了能够利用块作用域而声明的变量，但是却无法简单解释这些代码的行为——本代码与上节代码仅差一点声明变量的部分，为了写文章作对比在此处出现的结果与上述结果不同是理所应当的么，但是仔细一想好像还是不对啊。</p>
+<p>为什么在循环内当前的i就乖乖地被记住了？</p>
+<p>《ES6标准入门》提出了这个问题，也给出了答案。简单来说，标准要求引擎记住每一次let的值，下一次创建的时候，直接在这个值上递进。每一次循环体内的i其实都是一个新的变量！就是有这种设计你敢信？那么，函数在调用的过程中如上访问了不属于自己调用堆栈的变量（闭包），拿到了这个的每次循环块作用域下的新i。</p>
+<p>考察下面一组代码，直觉上上面的代码应该是等效这段代码的，但是结果大相径庭：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> b = []</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">let</span> i = &#123; <span class="attr">value</span>: <span class="number">0</span> &#125;; i.value &lt; <span class="number">5</span>; i.value++) &#123;</span><br><span class="line">    b[i.value] = <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="built_in">console</span>.log(i.value)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">b[<span class="number">2</span>]()  <span class="comment">// 5</span></span><br></pre></td></tr></table></figure></p>
+<p>这个样的结果反而是上述解释正确性的证据，下面补充一个for循环的设计问题，再对这个结果做出解释。</p>
+<h3 id="2）、for循环的作用域"><a href="#2）、for循环的作用域" class="headerlink" title="2）、for循环的作用域"></a>2）、for循环的作用域</h3><p>当使用了块作用域后，for循环就很特殊了。整个for循环（包括条件部分）是一个父作用域，而循环体内部又是一个子作用域。下面这段代码证明了这个说法：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">0</span>; i &lt; <span class="number">3</span>; i++) &#123;</span><br><span class="line">    <span class="keyword">let</span> i = <span class="string">'abc'</span></span><br><span class="line">    <span class="built_in">console</span>.log(i)</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// abc</span></span><br><span class="line"><span class="comment">// abc</span></span><br><span class="line"><span class="comment">// abc</span></span><br></pre></td></tr></table></figure></p>
+<p>若循环体内部声明了同样的一个块作用域的变量，按照规定在同一作用域无法声明相同名称的块作用域变量，然而这段代码并没有报错，这表明for循环整段代码和循环体是两个作用域。之所以循环体内能够拿到循环条件的变量，是因为变量可以在作用域链上寻找的关系。</p>
+<p>对比一下C/C++就可以直观感受这个非同寻常的设计了：<br><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;cstdio&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; <span class="number">5</span>; i++) &#123;</span><br><span class="line">        <span class="keyword">int</span> i;  <span class="comment">// 无法编译，原因是变量重复定义</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>知道了这种设计后，可以更好地解释1）中两种代码的行为。</p>
+<p>标准要求for循环中的循环条件作用域每循环一次就创建一个新的，并且循环所创建新的作用域复制上一个循环最后的作用域结果。for循环只有在第一次循环声明初始变量，以后每次这个初始变量只做复制和其他对应操作。</p>
+<p>在例a函数中，由于函数在不同的循环中实质上声明在不同的循环体作用域中，访问的是其对应循环的循环条件作用域中的变量，因此有“函数记住了对应变量”的效果。</p>
+<p>使用这段代码做对比：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> a = []</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">0</span>; i &lt; <span class="number">5</span>; i++) &#123;</span><br><span class="line">    a[i] = <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="built_in">console</span>.log(i)</span><br><span class="line">    &#125;</span><br><span class="line">    i = <span class="number">4</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">a[<span class="number">0</span>]() <span class="comment">// 4，也没有变成5</span></span><br></pre></td></tr></table></figure></p>
+<p>在第一次循环中变量被修改掉了，开始第二次循环前将第一次循环的作用域和对应记录复制了一份后，在第二次循环的作用域中对该变量增一，不符合循环条件即循环结束。在访问函数后实质上访问的仍然是第一份循环的作用域中的变量（此外，第二次循环的作用域会被销毁，第一次循环的作用域由于闭包所以并不会被销毁）。</p>
+<p>在例b函数中，函数使用的是引用对象上的属性。虽然每次循环复制了对象的指针，但是真正指向的却还是同一个对象。由于引用未曾改变，所以复制作用域这一行为对对象本身并没有任何影响；此时函数依然是闭包，不过就是每次真真实实地改掉了循环条件作用域中那个对象的属性。有这样的结果就不足为奇了。</p>
+<p>使用这段代码做对比吧：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> b = []</span><br><span class="line"><span class="keyword">const</span> another = &#123;</span><br><span class="line">    value: <span class="number">4</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">let</span> i = &#123; <span class="attr">value</span>: <span class="number">0</span> &#125;; i.value &lt; <span class="number">5</span>; i.value++) &#123;</span><br><span class="line">    b[i.value] = <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="built_in">console</span>.log(i.value)</span><br><span class="line">    &#125;</span><br><span class="line">    i = another</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">b[<span class="number">0</span>]()  <span class="comment">// 5, 且循环也只执行了一次</span></span><br></pre></td></tr></table></figure></p>
+<p>在循环中把变量的引用改掉了，在复制循环条件作用域后，循环条件作用域中新的变量也指向了another并对其属性做了增一操作，故有这样的结果。</p>
+<h3 id="3）、解决一些问题"><a href="#3）、解决一些问题" class="headerlink" title="3）、解决一些问题"></a>3）、解决一些问题</h3><p>由于块作用域的出现，使得很多原本设计上的失误可以得到很好的解决。例如下面这段代码。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">switch</span> (x) &#123;</span><br><span class="line">    <span class="keyword">case</span> <span class="number">0</span>:</span><br><span class="line">        <span class="keyword">let</span> foo;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    <span class="keyword">case</span> <span class="number">1</span>:</span><br><span class="line">        <span class="keyword">let</span> foo; <span class="comment">// TypeError for redeclaration.</span></span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>显而易见，可以在每个情况的标号后边补上大括号，将代码包裹起来，可以避免原先的var关键字重复声明（尽管重复声明也不会有问题）。在本例中，使用大括号包裹起来可以防止出现重复声明的错误。</p>
+<h1 id="二、声明变量"><a href="#二、声明变量" class="headerlink" title="二、声明变量"></a>二、声明变量</h1><p>很多var、const、let的行为其实大多数人都了然于胸，这里简单提一下，然后着重突出容易忽视的一些和作用域相关的问题。下面就分析一下目前JavaScript一共六种声明变量的关键字及其行为。注意，本文不探讨“定义”与“声明”的区别，因为JavaScript没有对此作出区分，文中的“定义”和“声明”语义一致。</p>
+<p>注意，下面所有提到的声明提升都是指在自己声明方式对应的作用域内进行提升，故不再下面重复这个说法了。</p>
+<h2 id="1、var"><a href="#1、var" class="headerlink" title="1、var"></a>1、var</h2><p>声明提升、可重复声明、没有块作用域。别用。</p>
+<h2 id="2、let、const"><a href="#2、let、const" class="headerlink" title="2、let、const"></a>2、let、const</h2><h3 id="1）、存在于块作用域"><a href="#1）、存在于块作用域" class="headerlink" title="1）、存在于块作用域"></a>1）、存在于块作用域</h3><h3 id="2）、可以被不同作用域覆盖声明"><a href="#2）、可以被不同作用域覆盖声明" class="headerlink" title="2）、可以被不同作用域覆盖声明"></a>2）、可以被不同作用域覆盖声明</h3><p>见4）的代码。</p>
+<h3 id="3）、临时死区"><a href="#3）、临时死区" class="headerlink" title="3）、临时死区"></a>3）、临时死区</h3><h3 id="4）、声明提升"><a href="#4）、声明提升" class="headerlink" title="4）、声明提升"></a>4）、声明提升</h3><p>这一点有所争议，原因是标准也对其闪烁其辞。不过一般我们还是认为这些声明方式具有声明提升的特性，考虑下面一段代码：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">let</span> tmp = <span class="string">'hello'</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">// console.log(tmp)  // 报错，原因是临时死区</span></span><br><span class="line">    <span class="keyword">let</span> tmp = <span class="string">'goodbye'</span></span><br><span class="line">    <span class="built_in">console</span>.log(tmp)  <span class="comment">// goodbye</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="built_in">console</span>.log(tmp)  <span class="comment">// hello</span></span><br></pre></td></tr></table></figure></p>
+<p>作为对比，我们看看c++的结果：<br><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;cstdio&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> tmp = <span class="number">1</span>;</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">"%d\n"</span>, tmp);  <span class="comment">// 1</span></span><br><span class="line">        <span class="keyword">int</span> tmp = <span class="number">2</span>;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">"%d\n"</span>, tmp);  <span class="comment">// 2</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">"%d\n"</span>, tmp);  <span class="comment">// 1</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>不言自明。可以把这些行为这样解释一番：虽然在所属作用域内有声明提升，但是直到真正声明时这段代码都会有临时死区，不让用，且假装未声明过的样子。真正声明变量后才可以正常使用。这种奇怪的行为是历史造成的，和传统的C系语言语法行为不一致。</p>
+<h2 id="3、function"><a href="#3、function" class="headerlink" title="3、function"></a>3、function</h2><p>声明提升、可重复声明、但有块作用域。前两者行为和var一致。</p>
+<p>这里提一句，使用函数表达式（不是这里提到的函数声明）定义的函数不会声明提升，服从声明关键字的重复声明和作用域设计。</p>
+<p>当运行时引入块作用域后，函数声明的行为也发生了改变。考察下面一段代码：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// app()  // 报错</span></span><br><span class="line">&#123;</span><br><span class="line">    app()  <span class="comment">// 通过</span></span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">app</span>(<span class="params"></span>) </span>&#123; &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>新版本的Node.js很好地贯彻了块作用域，但是旧版本（如上古的v0.12.9）因为不存在块作用域，因此在大括号外调用函数也是可以运行的。</p>
+<p>虽然各个版本不一致的行为会让人困扰（浏览器环境更甚），但是这个改动的确挺不错的，虽然在块作用域里面声明函数这种行为往往不太优雅。</p>
+<p>结论就是，在Node.js实现ES6标准以后，函数声明在出现块作用域后的行为类似于let和const了。</p>
+<h2 id="4、import"><a href="#4、import" class="headerlink" title="4、import"></a>4、import</h2><p>未真正实现，无视。</p>
+<h2 id="5、class"><a href="#5、class" class="headerlink" title="5、class"></a>5、class</h2><p>有了块作用域这个新事物的存在，class的行为自然和let和const一致。</p>
+<h2 id="6、意义"><a href="#6、意义" class="headerlink" title="6、意义"></a>6、意义</h2><p>简单地提几句。</p>
+<p>对于while、for、if等自带大括号的语句而言，块体中使用let和const定义的变量具有块作用域，合理地使用具有块作用域的变量可以防止污染作用域空间。</p>
+<p>下一个结论。能用const的地方别用let，能用let的地方别用var。哪怕编译器（解释器）对其实现具有效率差异，但是编译器（解释器）是与时俱进的，总会向着好的一面做改进的。作为编写上层业务逻辑的程序员，应该更加注重代码的可阅读性才行。</p>
+<h1 id="三、作用域链"><a href="#三、作用域链" class="headerlink" title="三、作用域链"></a>三、作用域链</h1><p>JavaScript在运行时中，会维护这么几种环境，其中就有作用域链和调用堆栈。</p>
+<h2 id="1、概念区别"><a href="#1、概念区别" class="headerlink" title="1、概念区别"></a>1、概念区别</h2><p>上下文是运行时产生的，由函数的调用决定。不同上下文根据调用关系形成调用堆栈。因此可以说调用堆栈记录了函数的调用位置、局部变量等信息。</p>
+<p>作用域在不存在动态作用域（with语句）的情况下是静态的，即词法作用域是由定义时决定的。不同作用域根据父子逻辑关系的组合构成作用域链。作用域链用途是为了保证对执行环境有权访问的所有变量和函数的有序访问。变量标识符的解析是沿着作用域链一级一级地搜索标识符的过程。内部作用域因此可以访问外部作用域。</p>
+<p>由于函数调用决定了上下文，在进入一个函数以后，其中声明的变量可以被直接访问（但块作用域中声明的变量要进入块中才可以访问）。也因此，函数作用域就显得相对有点特殊，比起块作用域而言。</p>
+<h2 id="2、查看程序运行状态"><a href="#2、查看程序运行状态" class="headerlink" title="2、查看程序运行状态"></a>2、查看程序运行状态</h2><p>一个容易想到的问题就是，我当前的程序的局部变量、作用域、上下文和调用堆栈究竟是什么，闭包如何表示？这里就可以借助工具调试直观地观察这个问题的答案了。</p>
+<p><img src="/img/scope-and-scope-chain-in-javascript/window.png" alt="window"></p>
+<p>整个变量窗格是当前调用堆栈顶部所可以访问到的变量。<br>• local栏 函数作用域中的变量；<br>• block栏 块作用域中的变量，可以有多个block栏，即具有父子关系的多个块作用域；<br>• closure栏 即闭包栏，函数突破自己的作用域限制所能够访问到的外部作用域的变量；<br>• global栏 全局变量，即顶层对象global上的变量。</p>
+<p>其中，值得注意的是：<br>• 不要被顶部的this迷惑，真实的this即上下文并不一定出现在作用域链最前头（如块作用域、箭头函数）；<br>• 除了closure栏、global栏和this，其他变量都是声明在当前上下文的；<br>• closure栏是一个特殊的窗格，函数在调用后进入自己的上下文中，而函数本身又有自己的函数作用域，因此外部作用域所声明的变量都不在当前上下文。当需要访问外部作用域的变量时，需要一个特殊的通道来保证这个操作的正确性，这就是闭包（closure）。</p>
+<h2 id="3、作用域链"><a href="#3、作用域链" class="headerlink" title="3、作用域链"></a>3、作用域链</h2><p>上文提及到函数作用域有点特殊，这里详细地谈一下为什么。</p>
+<h3 id="1）、函数作用域内"><a href="#1）、函数作用域内" class="headerlink" title="1）、函数作用域内"></a>1）、函数作用域内</h3><p>对于函数作用域内部而言，因为函数被调用后产生了上下文，所以在ES5及以前内部声明的所有变量的访问都是无拘无束的，因为都在同一层上下文、作用域中（不考虑动态修改作用域的with和catch）。</p>
+<p>上下文与函数作用域相对应，作用域链也是函数对象的属性[[scope]]所连接的。ES5及以前的标准的是，作用域链和函数对象上的属性[[scope]]有关。[[scope]]是一个指针数组，始终有一个组员指向了global顶层对象，也因此你可以在任何作用域、上下文内访问到全局变量。它有时候又有一个组员指向closure对象（然而对于作用域链的标准不停地在变，为的就是要既兼容历史又不会有直观上的错误，可能今后又变了），使得其能够通过闭包机制访问自己函数作用域外部的变量。</p>
+<h3 id="2）、函数作用域外"><a href="#2）、函数作用域外" class="headerlink" title="2）、函数作用域外"></a>2）、函数作用域外</h3><p>由于对于一个特定的函数而言，函数被调用后其内部的函数作用域和上下文属于这个特定的函数。而调用这个函数的函数又有其自身的作用域和上下文，此时我们这里称呼他们为那个特定的函数的“函数作用域外”。</p>
+<p>这个特定的函数本身也是一个对象变量，被安置在外层的函数作用域中（先不考虑闭包），即“函数作用域外”是包含这个函数对象变量的。由此，通过这样的递归定义，不难发现所有的作用域都被串联起来了。这就形成了原始的作用域链。</p>
+<h3 id="3）、块作用域"><a href="#3）、块作用域" class="headerlink" title="3）、块作用域"></a>3）、块作用域</h3><p>原先的设计满足了原先的需求，但是块作用域的出现使得设计需要变更。变更很简单，只需要满足在块作用域声明使用let、const、class和function声明的内容无法在该块作用域外访问就行。也就是说，这个块作用域内部的一些变量依然在当前这个函数被调用产生的上下文，只是限制了一定的规则无法在自身块作用域外被访问了。然后，这并不会改变上面的作用域链，依然可以递归地找到上级、上级。</p>
+<p>小结一下，块作用域没有自己的属性[[scope]]，没有自己的上下文（当然也没有this、arguments等对象），也处在它所在的函数被调用后产生的上下文中。它为变量提供了生命周期！</p>
+<h3 id="4）、闭包"><a href="#4）、闭包" class="headerlink" title="4）、闭包"></a>4）、闭包</h3><p>闭包是一个令人困惑的概念，因为他似乎和离散数学中的理论有点差异。这里有一个定义：闭包是指有权访问另一个函数作用域中的变量的函数。根据定义，闭包是函数，闭包与作用域有关。</p>
+<p>闭包难以理解的另一个原因是，其总是和作用域链、上下文、匿名函数、立即执行函数等概念一起出现，使得网络上的示例代码往往充斥着多个语法特性而难以被透彻地解读。显然根据定义，闭包由这些概念中的作用域决定，实际上是函数作用域决定，与上下文有相关性，与匿名函数、立即执行函数和其他概念无关。</p>
+<p>由于作用域链以函数作用域为划分基准，函数在被调用后会产生新的上下文，而闭包是突破函数作用域访问外部作用域的函数，需要访问不是自己上下文的变量，因此需要一种机制来保证闭包的正确性。</p>
+<p>合理的机制就是，在声明函数的时候，就记录该函数会访问哪些不属于该函数作用域的变量。通过层层递归，不断递交给外层函数那些内层函数闭包变量。即，一个外边的变量的指针可以通过作用域链交给需要这个变量的函数，也就能够表现出内部函数访问外部变量是通过作用域链找到的。</p>
+<p><img src="/img/scope-and-scope-chain-in-javascript/closure1.png" alt="closure1"></p>
+<p><img src="/img/scope-and-scope-chain-in-javascript/closure2.png" alt="closure2"></p>
+<p><img src="/img/scope-and-scope-chain-in-javascript/closure3.png" alt="closure3"></p>
+<p><img src="/img/scope-and-scope-chain-in-javascript/closure4.png" alt="closure4"></p>
+<p>目前的Node.js将闭包变量挂载在[[scope]]上，使得内部函数即便访问诸多层之外的变量也可以一步访问到位。这可以通过调试工具查看得到。在“查看程序运行状态”这节中，就可以通过变量窗格的closure栏查看得到哪些变量是属于闭包传递到当前上下文的。这个closure栏同样可以有多个，代表不同层函数作用域所给予的“便利”。</p>
+<p><img src="/img/scope-and-scope-chain-in-javascript/closure5.png" alt="closure5"></p>
+<p>那我们常说闭包可能导致内存溢出是怎么一回事呢？考虑下面一段代码：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">box</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">    <span class="keyword">const</span> obj = &#123;</span><br><span class="line">        value: <span class="number">5</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">get</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> obj.value</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">function</span> <span class="title">set</span>(<span class="params">update</span>) </span>&#123;</span><br><span class="line">        obj.value = update</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> &#123;</span><br><span class="line">        <span class="keyword">set</span>, <span class="keyword">get</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">const closureBox = box()</span><br><span class="line">closureBox.<span class="keyword">set</span>(666)</span><br><span class="line">console.log(closureBox.<span class="keyword">get</span>())  // 666</span><br><span class="line">// obj.value = 10  // 当然会报错</span><br></pre></td></tr></table></figure></p>
+<p>注意了，本应该在生命周期结束（box执行完后）的变量obj没有被销毁，而是通过get、set函数被暴露了出来。get、set函数自己本身并不拥有它，而是通过闭包拿到了它。obj属于函数box的作用域，因此全局作用域无法直接访问到obj，只能通过box函数所暴露出来的set、get函数访问。这就模拟了JavaScript所没有的私有属性这一概念，甚至可以设计出较好的类的机制。这种模拟方法利用了闭包机制，但是又有许多不足之处，例如内存可能无法被正确释放、语法难以理解等等。随着正式的块作用域和class关键字的支持，这种模拟私有属性的方法可以完成其历史使命了（但是闭包作为访问外部作用域的一种机制是无法被取代的，要和上面的一种模拟私有属性的应用区分开来）。</p>
+<p>那怎么知道我当前程序的完整作用域链呢？当前上下文中的那部分作用域链可以从调试的变量窗格清晰地看见，然而不属于当前上下文的作用域从属关系被隐藏掉了。幸运地是，几乎没有程序员会对作用域的丛属关系犯迷糊——自己变量声明的顺序，自己会不知道吗？</p>
+<h2 id="4、全局变量的作用域"><a href="#4、全局变量的作用域" class="headerlink" title="4、全局变量的作用域"></a>4、全局变量的作用域</h2><p>我们都知道有一个东西叫WeakMap（当然可以是其他任意合理的内置变量、对象），下面这段代码对WeakMap动了一点手脚：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">let</span> <span class="built_in">WeakMap</span> = <span class="string">'lalala'</span></span><br><span class="line"><span class="built_in">console</span>.log(<span class="built_in">WeakMap</span>)  <span class="comment">// lalala</span></span><br><span class="line"><span class="built_in">console</span>.log(global.WeakMap)  <span class="comment">// [Function: WeakMap]</span></span><br></pre></td></tr></table></figure></p>
+<p>乍看之下好像没什么问题，但是仔细一想，不是不让在同一个作用域中使用let重复声明变量的吗？WeakMap真正的归宿是在global对象下，也没有遭到改动。</p>
+<p>接下来再动一点手脚：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// t1.js</span></span><br><span class="line"><span class="built_in">WeakMap</span> = <span class="string">'modified'</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// t.js</span></span><br><span class="line"><span class="built_in">require</span>(<span class="string">'./t1'</span>)</span><br><span class="line"><span class="keyword">let</span> <span class="built_in">WeakMap</span> = <span class="string">'lalala'</span></span><br><span class="line"><span class="built_in">console</span>.log(<span class="built_in">WeakMap</span>)  <span class="comment">// lalala</span></span><br><span class="line"><span class="built_in">console</span>.log(global.WeakMap)  <span class="comment">// modified</span></span><br></pre></td></tr></table></figure></p>
+<p>我们知道global是全进程唯一的，在别的文件中，我把真正的WeakMap改掉了，而这影响到了本文件中顶层对象global的属性WeakMap了，但没有影响到所属的作用域下的同名变量。</p>
+<p>这启示了我们，模块中拿到的作用域根本就不是全局作用域！仔细一想不难发现，Node.js对待模块不就是在文件外包裹了一层函数的外衣吗，这样的作用域实质上还是函数作用域。自己的作用域中寻找到了变量，便不再循着作用域链寻找全局作用域下的变量。即有结论，这些内置变量存在于全局作用域之上，可以理所应当地被称作全局变量。</p>
+<p>在repl环境和浏览器环境中，也可以重新声明WeakMap且做到不修改global.WeakMap。那有什么结论呢？</p>
+<p>例a：<br><img src="/img/scope-and-scope-chain-in-javascript/example_a.png" alt="example_a"></p>
+<p>例b：<br><img src="/img/scope-and-scope-chain-in-javascript/example_b.png" alt="example_b"></p>
+
+                <hr>
+                
+
+                <ul class="pager">
+                    
+                    
+                    <li class="next">
+                        <a href="/articles/JavaScript/this-and-context-in-javascript/" data-toggle="tooltip" data-placement="top" title="JavaScript中的this与上下文问题">Next Post &rarr;</a>
+                    </li>
+                    
+                </ul>
+
+                
+
+                
+
+
+                <!--加入新的评论系统-->
+                
+
+                
+
+            </div>
+
+            <div class="hidden-xs col-sm-3 toc-col">
+                <div class="toc-wrap">
+                    <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#一、作用域种类"><span class="toc-text">一、作用域种类</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1、全局作用域与函数作用域"><span class="toc-text">1、全局作用域与函数作用域</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2、块作用域"><span class="toc-text">2、块作用域</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1）、令人迷惑的结果"><span class="toc-text">1）、令人迷惑的结果</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2）、for循环的作用域"><span class="toc-text">2）、for循环的作用域</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3）、解决一些问题"><span class="toc-text">3）、解决一些问题</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#二、声明变量"><span class="toc-text">二、声明变量</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1、var"><span class="toc-text">1、var</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2、let、const"><span class="toc-text">2、let、const</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1）、存在于块作用域"><span class="toc-text">1）、存在于块作用域</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2）、可以被不同作用域覆盖声明"><span class="toc-text">2）、可以被不同作用域覆盖声明</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3）、临时死区"><span class="toc-text">3）、临时死区</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4）、声明提升"><span class="toc-text">4）、声明提升</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3、function"><span class="toc-text">3、function</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4、import"><span class="toc-text">4、import</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5、class"><span class="toc-text">5、class</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6、意义"><span class="toc-text">6、意义</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#三、作用域链"><span class="toc-text">三、作用域链</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#1、概念区别"><span class="toc-text">1、概念区别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2、查看程序运行状态"><span class="toc-text">2、查看程序运行状态</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3、作用域链"><span class="toc-text">3、作用域链</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1）、函数作用域内"><span class="toc-text">1）、函数作用域内</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2）、函数作用域外"><span class="toc-text">2）、函数作用域外</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3）、块作用域"><span class="toc-text">3）、块作用域</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4）、闭包"><span class="toc-text">4）、闭包</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4、全局变量的作用域"><span class="toc-text">4、全局变量的作用域</span></a></li></ol></li></ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Sidebar Container -->
+
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+
+                <!-- Friends Blog -->
+                
+            </div>
+        </div>
+
+    </div>
+</article>
+
+
+
+
+
+
+
+<!-- Footer -->
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-center">
+                <br>
+                <ul class="list-inline text-center">
+                
+                
+                
+
+                
+
+                
+
+                
+                    <li>
+                        <a target="_blank" href="https://github.com/zhmoll">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; Zhmoll 2019
+                    <br>
+                    <span id="busuanzi_container_site_pv" style="font-size: 12px;">PV: <span id="busuanzi_value_site_pv"></span> Times</span>
+                    <br>
+                    Theme by <a href="https://haojen.github.io/">Haojen Ma</a>
+                </p>
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src="/js/jquery.min.js"></script>
+
+<!-- Bootstrap Core JavaScript -->
+<script src="/js/bootstrap.min.js"></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="/js/blog.js"></script>
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if($('#tag_cloud').length !== 0){
+        async("https://zhmoll.com/js/jquery.tagcloud.js",function(){
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: {start: '#bbbbee', end: '#0085a1'},
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdn.bootcss.com/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+
+<!-- Google Analytics -->
+
+
+
+<!-- Baidu Tongji -->
+
+
+<!-- swiftype -->
+<script type="text/javascript">
+  (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+  (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+  e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+  })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+  _st('install','','2.0.0');
+</script>
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<!--wechat title img-->
+<img class="wechat-title-img" src="img/head.jpg">
+</body>
+
+</html>
